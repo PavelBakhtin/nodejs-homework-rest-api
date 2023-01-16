@@ -1,54 +1,73 @@
-const {
-  listContacts,
-  getContactById,
-  removeContact,
-  addContact,
-  updateContact,
-} = require("../models/contacts.js");
 const { HttpError } = require("../utilities/index");
 
+const { Contact } = require("../models/contacts.js");
+
 const getContacts = async (req, res, next) => {
-  const contactsList = await listContacts();
-  res.status(200).json(contactsList);
+  const contacts = await Contact.find({});
+  res.status(200).json(contacts);
 };
 
 const getContact = async (req, res, next) => {
   const { id } = req.params;
-  const contact = await getContactById(id);
+  const contact = await Contact.findById(id);
+  if (!contact) {
+    return next(HttpError(404, "Not found"));
+  }
   return res.status(200).json(contact);
 };
 
 const createContact = async (req, res, next) => {
-  const newContact = await addContact(req.body);
+  const { name, phone, email, favorite } = req.body;
+  const newContact = await Contact.create({ name, phone, email, favorite });
   res.status(201).json(newContact);
 };
 
 const deleteContact = async (req, res, next) => {
   const { id } = req.params;
-  const contact = await getContactById(id);
+  const contact = await Contact.findById(id);
   if (!contact) {
     return next(HttpError(404, "Not found"));
   }
-  await removeContact(id);
+  await Contact.findByIdAndRemove(id);
   res.status(200).json({ message: "contact deleted" });
 };
+
 const changeContact = async (req, res, next) => {
+  const { name, phone, email } = req.body;
   const { id } = req.params;
-  const contact = await getContactById(id);
-  if (!req.body) {
-    return res.status(400).json({ message: "missing fields" });
-  }
-  if (!contact) {
+  const updatedContact = await Contact.findByIdAndUpdate(
+    id,
+    {
+      $set: { name, phone, email },
+    },
+    { new: true }
+  );
+  if (!updatedContact) {
     return next(HttpError(404, "Not found"));
   }
-  const updatedContact = await updateContact(id, req.body);
   res.status(200).json(updatedContact);
 };
 
+const updateStatusContact = async (req, res, next) => {
+  const { favorite } = req.body;
+  const { id } = req.params;
+  const updatedContact = await Contact.findByIdAndUpdate(
+    id,
+    {
+      $set: { favorite },
+    },
+    { new: true }
+  );
+  if (!updatedContact) {
+    return next(HttpError(404, "Not found"));
+  }
+  res.status(200).json(updatedContact);
+};
 module.exports = {
   getContacts,
   changeContact,
   deleteContact,
   createContact,
   getContact,
+  updateStatusContact,
 };
