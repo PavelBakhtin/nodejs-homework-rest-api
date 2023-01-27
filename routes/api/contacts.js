@@ -14,6 +14,10 @@ const {
 } = require("../../schemas/validateContact");
 const { validateBody } = require("../../middleware/index");
 const { tryCatchWrapper } = require("../../utilities/index");
+const { authMiddleware } = require("../../middleware/authMiddleware");
+
+router.use(tryCatchWrapper(authMiddleware));
+
 router.get("/", tryCatchWrapper(getContacts));
 
 router.get("/:id", tryCatchWrapper(getContact));
