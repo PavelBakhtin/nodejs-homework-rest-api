@@ -2,6 +2,7 @@ const { User } = require("../models/user");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const { Conflict, BadRequest } = require("http-errors");
+const gravatar = require("gravatar");
 
 const signup = async (req, res, next) => {
   const { email, password } = req.body;
@@ -12,6 +13,7 @@ const signup = async (req, res, next) => {
     const savedUser = await User.create({
       email,
       password: hashedPassword,
+      avatarURL: gravatar.url(email),
     });
 
     res.status(201).json({
@@ -36,7 +38,8 @@ const login = async (req, res, next) => {
   if (!storedUser) {
     throw BadRequest("Email or password is wrong");
   }
-  if (!(await bcrypt.compare(password, storedUser.password))) {
+  const matchingUserData = await bcrypt.compare(password, storedUser.password);
+  if (!matchingUserData) {
     throw BadRequest("Email or password is wrong");
   }
   const token = jwt.sign({ _id: storedUser._id }, process.env.JWT_SECRET, {
@@ -80,4 +83,5 @@ const changeSub = async (req, res, next) => {
     subscription: subsType,
   });
 };
+
 module.exports = { signup, login, logout, getCurrent, changeSub };
