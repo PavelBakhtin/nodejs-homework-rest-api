@@ -12,7 +12,7 @@ const {
   validationSchema,
   validationFavSchema,
 } = require("../../schemas/validateContact");
-const { validateBody } = require("../../middleware/index");
+const { validateBody } = require("../../middleware/validationMiddleware");
 const { tryCatchWrapper } = require("../../utilities/index");
 const { authMiddleware } = require("../../middleware/authMiddleware");
 

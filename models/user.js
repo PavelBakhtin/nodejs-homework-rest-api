@@ -18,6 +18,7 @@ const schema = mongoose.Schema({
     type: String,
     default: null,
   },
+  avatarURL: String,
 });
 const User = mongoose.model("user", schema);
 
