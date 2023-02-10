@@ -1,8 +1,10 @@
 const { User } = require("../models/user");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-const { Conflict, BadRequest } = require("http-errors");
+const { Conflict, BadRequest, NotFound } = require("http-errors");
 const gravatar = require("gravatar");
+const { sendMail } = require("../utilities/sendGrid");
+const { nanoid } = require("nanoid");
 
 const signup = async (req, res, next) => {
   const { email, password } = req.body;
@@ -10,12 +12,19 @@ const signup = async (req, res, next) => {
   const hashedPassword = await bcrypt.hash(password, salt);
 
   try {
+    const verificationToken = nanoid(10);
     const savedUser = await User.create({
       email,
       password: hashedPassword,
       avatarURL: gravatar.url(email),
+      verificationToken,
     });
 
+    await sendMail({
+      email,
+      subject: "Email confirmation",
+      html: `<a href="http://localhost:3000/api/users/verify/${verificationToken}">Please, confirm your email</a>`,
+    });
     res.status(201).json({
       user: {
         email: savedUser.email,
@@ -37,6 +46,9 @@ const login = async (req, res, next) => {
   });
   if (!storedUser) {
     throw BadRequest("Email or password is wrong");
+  }
+  if (storedUser.verify === false) {
+    throw BadRequest("Email is not verified");
   }
   const matchingUserData = await bcrypt.compare(password, storedUser.password);
   if (!matchingUserData) {
@@ -84,4 +96,43 @@ const changeSub = async (req, res, next) => {
   });
 };
 
-module.exports = { signup, login, logout, getCurrent, changeSub };
+const verifyUser = async (req, res, next) => {
+  const { verificationToken } = req.params;
+  const user = await User.findOne({ verificationToken });
+  if (!user) {
+    throw NotFound("User not found");
+  }
+  await User.findByIdAndUpdate(user._id, {
+    verify: true,
+    verificationToken: null,
+  });
+  return res.status(200).json({ message: "Verification successful" });
+};
+const resendEmail = async (req, res, next) => {
+  const { email } = req.body;
+  if (!email) {
+    throw BadRequest("missing required field email");
+  }
+  const verificationToken = nanoid(10);
+  const user = await User.findOneAndUpdate({ email }, { verificationToken });
+
+  if (user.verify === false) {
+    await sendMail({
+      email,
+      subject: "Email confirmation",
+      html: `<a href="http://localhost:3000/api/users/verify/${verificationToken}">Please, confirm your email</a>`,
+    });
+  } else {
+    throw BadRequest("Verification has already been passed");
+  }
+  return res.status(200).json({ message: "Verification email sent" });
+};
+module.exports = {
+  signup,
+  login,
+  logout,
+  getCurrent,
+  changeSub,
+  verifyUser,
+  resendEmail,
+};
