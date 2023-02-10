@@ -6,6 +6,8 @@ const {
   logout,
   getCurrent,
   changeSub,
+  verifyUser,
+  resendEmail,
 } = require("../../controllers/authControllers");
 const { tryCatchWrapper } = require("../../utilities/index");
 const { validateBody } = require("../../middleware/validationMiddleware");
@@ -13,6 +15,7 @@ const { userValidationSchema } = require("../../schemas/validateUser");
 const { authMiddleware } = require("../../middleware/authMiddleware");
 const { uploadMiddleware } = require("../../middleware/uploadMiddleware");
 const { uploadAvatars } = require("../../controllers/avatarsController");
+
 router.post(
   "/signup",
   validateBody(userValidationSchema),
@@ -39,4 +42,6 @@ router.patch(
   [authMiddleware, uploadMiddleware.single("avatar")],
   tryCatchWrapper(uploadAvatars)
 );
+router.get("/verify/:verificationToken", tryCatchWrapper(verifyUser));
+router.post("/verify", tryCatchWrapper(resendEmail));
 module.exports = router;
